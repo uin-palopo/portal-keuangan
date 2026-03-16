@@ -152,7 +152,7 @@
 
       useEffect(() => {
         const loadData = async () => {
-          if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "ISI_DENGAN_URL_WEB_APP_GAS_ANDA_DI_SINI") {
+          if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "MASUKKAN_URL_GAS_ANDA_DI_SINI") {
             setError("Tolong atur URL Web App Google Apps Script di dalam kode index.html.");
             setLoading(false);
             return;
@@ -290,9 +290,9 @@
         return <IconComponent {...props} />;
       };
 
-      // FUNGSI GET SECTION YANG ROBUST (Mengembalikan default jika kosong)
+      // FUNGSI MENGAMBIL JUDUL BAGIAN (Robust, kebal typo spasi)
       const getSection = (key) => {
-        const sec = data.sections?.find(s => s.section_key === key);
+        const sec = data.sections?.find(s => String(s.section_key).trim().toLowerCase() === key.toLowerCase());
         const def = defaultSections.find(s => s.section_key === key);
         return {
           title: sec?.title || def?.title || '',
