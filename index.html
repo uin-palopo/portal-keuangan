@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Keuangan UIN Palopo - Dasbor SaaS</title>
+  
+  <!-- Optimasi Koneksi CDN -->
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin>
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://script.google.com" crossorigin>
+  
+  <!-- Tipografi: Inter & Poppins -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Konfigurasi Tema Tailwind (SaaS CRM Specification - Violet/Indigo Concept) -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Poppins', 'sans-serif'],
+          },
+          colors: {
+            primary: '#4F46E5', // Indigo 600
+            secondary: '#6366F1', // Indigo 500
+            accent: '#8B5CF6', // Violet 500
+            gray: {
+              50: '#F9FAFB',
+              100: '#F3F4F6',
+              200: '#E5E7EB',
+              300: '#D1D5DB',
+              400: '#9CA3AF',
+              500: '#6B7280',
+              600: '#4B5563',
+              700: '#374151',
+              800: '#1F2937',
+              900: '#111827',
+            },
+            success: '#10B981',
+            warning: '#F59E0B',
+            error: '#EF4444',
+          },
+          boxShadow: {
+            'sm': '0 2px 10px rgba(0, 0, 0, 0.04)',
+            'lg': '0 10px 30px rgba(0, 0, 0, 0.06)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- React & ReactDOM (UMD) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #F9FAFB; color: #111827; }
+    .animate-spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    
+    /* Scrollbar minimalis untuk dasbor */
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E5E7EB; border-radius: 10px; }
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb { background-color: #D1D5DB; }
+  </style>
+</head>
+<body>
+  
+  <!-- ROOT DIV DENGAN PRELOADER MURNI (Muncul Instan) -->
+  <div id="root">
+    <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #F9FAFB;">
+      <style>
+        @keyframes instant-spin { 100% { transform: rotate(360deg); } }
+        .instant-spinner { width: 48px; height: 48px; border: 3px solid #E5E7EB; border-top-color: #4F46E5; border-radius: 50%; animation: instant-spin 1s linear infinite; }
+      </style>
+      <div class="instant-spinner"></div>
+      <p style="margin-top: 16px; color: #6B7280; font-weight: 500; font-size: 14px;">Memuat ruang kerja...</p>
+    </div>
+  </div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ============================================================================
+    // MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
+    // ============================================================================
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzJCYP2VUoOKtLjD1S4yH9U1ygKP4qf0EeQQgh9wBj5UTPMiv6PQGisihzsuTDOf18rmA/exec";
+
+    // 1. ICONS (Outline Style, strokeWidth: 1.5)
+    const Icons = {
+      Building2: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>,
+      ExternalLink: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+      FileText: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>,
+      Newspaper: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/></svg>,
+      AlertCircle: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+      Search: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+      ChevronRight: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="9 18 15 12 9 6"/></svg>,
+      BookOpen: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
+      Landmark: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="3" y1="22" x2="21" y2="22"/><line x1="6" y1="18" x2="6" y2="11"/><line x1="10" y1="18" x2="10" y2="11"/><line x1="14" y1="18" x2="14" y2="11"/><line x1="18" y1="18" x2="18" y2="11"/><polygon points="12 2 20 7 4 7"/></svg>,
+      Calculator: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="4" y="2" width="16" height="20" rx="2" ry="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>,
+      ShieldCheck: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>,
+      Calendar: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+      User: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+      LogOut: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>,
+      Lock: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+      Plus: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+      Edit: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+      Trash2: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+      X: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+      Image: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>,
+      LayoutDashboard: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>,
+      LineChart: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>,
+      PieChart: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>,
+      Bell: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>,
+      Menu: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>,
+      Activity: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
+      Type: (props) => <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" {...props}><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>
+    };
+
+    const defaultHero = {
+      id: 'hero_1',
+      badge: 'Sistem Informasi Terpadu',
+      title1: 'Pusat Layanan Data Keuangan',
+      title2: 'UIN Palopo',
+      description: 'Akses cepat ke berbagai sistem aplikasi keuangan, pembaruan regulasi terbaru, dan informasi anggaran secara transparan dan terintegrasi dalam satu platform cerdas.',
+      btn1_text: 'Mulai Eksplorasi',
+      btn1_target: 'aplikasi',
+      btn2_text: 'Lihat Regulasi Terbaru',
+      btn2_target: 'peraturan',
+      bg_image_url: ''
+    };
+
+    const defaultSections = [
+      { id: 'sec_1', section_key: 'aplikasi', title: 'Portal Aplikasi', subtitle: 'Sistem terintegrasi kementerian keuangan' },
+      { id: 'sec_2', section_key: 'berita', title: 'Berita & Pembaruan', subtitle: 'Informasi terbaru seputar anggaran & keuangan' },
+      { id: 'sec_3', section_key: 'peraturan', title: 'Regulasi Terkini', subtitle: 'Arsip dokumen & landasan hukum' }
+    ];
+
+    // 2. DATA FETCHING LAYER (Dengan Optimasi Cache / SWR)
+    function usePortalData() {
+      const [data, setData] = useState({ berita: [], links: [], peraturan: [], hero: [defaultHero], sections: defaultSections });
+      const [loading, setLoading] = useState(true);
+      const [error, setError] = useState(null);
+
+      useEffect(() => {
+        const loadData = async () => {
+          if (!GAS_WEB_APP_URL || GAS_WEB_APP_URL === "ISI_DENGAN_URL_WEB_APP_GAS_ANDA_DI_SINI") {
+            setError("Tolong atur URL Web App Google Apps Script di dalam kode index.html.");
+            setLoading(false);
+            return;
+          }
+
+          const cachedData = localStorage.getItem('portalUINData');
+          let parsedCache = null;
+
+          if (cachedData) {
+            try {
+              parsedCache = JSON.parse(cachedData);
+              setData(parsedCache);
+              setLoading(false);
+            } catch (e) {
+              console.error("Cache tidak valid");
+            }
+          } else {
+             setLoading(true);
+          }
+
+          try {
+            const response = await fetch(`${GAS_WEB_APP_URL}?action=getData`);
+            if (!response.ok) throw new Error(`Kesalahan HTTP! status: ${response.status}`);
+            
+            const result = await response.json();
+            
+            if (result.success || result.status === 'success') {
+              const finalData = result.data || result;
+              
+              // Gunakan data fallback dari cache jika backend tidak mengirimkan hero
+              const heroData = (finalData.hero && finalData.hero.length > 0) 
+                               ? finalData.hero 
+                               : (parsedCache && parsedCache.hero && parsedCache.hero.length > 0 ? parsedCache.hero : [defaultHero]);
+                               
+              // Gunakan data fallback dari cache jika backend tidak mengirimkan sections
+              const sectionsData = (finalData.sections && finalData.sections.length > 0) 
+                               ? finalData.sections 
+                               : (parsedCache && parsedCache.sections && parsedCache.sections.length > 0 ? parsedCache.sections : defaultSections);
+              
+              const formattedData = {
+                berita: finalData.berita || [],
+                links: finalData.links || [],
+                peraturan: finalData.peraturan || [],
+                hero: heroData,
+                sections: sectionsData
+              };
+              
+              setData(formattedData);
+              localStorage.setItem('portalUINData', JSON.stringify(formattedData));
+            } else {
+              if (!cachedData) throw new Error(result.message || "Gagal mengambil data dari server.");
+            }
+          } catch (err) {
+            if (!cachedData) setError(err.message || "Koneksi ke server terputus.");
+          } finally {
+            setLoading(false);
+          }
+        };
+
+        loadData();
+      }, []);
+
+      return { data, loading, error, setData };
+    }
+
+    // 3. UI COMPONENTS (Gaya SaaS)
+    const Card = ({ children, className = "", noPadding = false, ...props }) => (
+      <div className={`bg-white rounded-[16px] border border-gray-200 shadow-sm transition-shadow hover:shadow-md overflow-hidden ${className}`} {...props}>
+        {noPadding ? children : <div className="p-6">{children}</div>}
+      </div>
+    );
+
+    const Badge = ({ children, variant = "default", className = "" }) => {
+      const variants = {
+        default: "bg-indigo-50 text-primary border border-indigo-100",
+        outline: "bg-white border border-gray-200 text-gray-600",
+        primary: "bg-primary text-white",
+        success: "bg-emerald-50 text-success border border-emerald-100"
+      };
+      return <span className={`px-3 py-1 rounded-full text-[14px] font-medium ${variants[variant]} ${className}`}>{children}</span>;
+    };
+
+    const Button = ({ children, variant = "primary", className = "", ...props }) => {
+      const baseStyle = "inline-flex items-center justify-center rounded-[12px] text-[16px] font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none";
+      const variants = {
+        primary: "bg-primary text-white hover:bg-secondary shadow-sm px-6 py-3 focus:ring-primary",
+        outline: "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 px-6 py-3 focus:ring-gray-200",
+        ghost: "text-gray-600 hover:bg-gray-100 hover:text-gray-900 px-4 py-2",
+        danger: "bg-error text-white hover:bg-red-600 shadow-sm px-6 py-3 focus:ring-error",
+        ghost_danger: "text-error hover:bg-red-50 p-2 rounded-[10px]",
+        ghost_primary: "text-primary hover:bg-indigo-50 p-2 rounded-[10px]"
+      };
+      return <button className={`${baseStyle} ${variants[variant]} ${className}`} {...props}>{children}</button>;
+    };
+
+    const Modal = ({ isOpen, onClose, title, children }) => {
+      if (!isOpen) return null;
+      return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-[16px] shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="font-semibold text-[18px] font-display text-gray-900">{title}</h3>
+              <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-700 transition-colors"><Icons.X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 max-h-[75vh] overflow-y-auto custom-scrollbar">{children}</div>
+          </div>
+        </div>
+      );
+    };
+
+    // 4. APLIKASI UTAMA
+    function App() {
+      const { data, loading, error, setData } = usePortalData();
+      const [activeTab, setActiveTab] = useState('home');
+      const [currentUser, setCurrentUser] = useState(null); 
+      const [loginUsername, setLoginUsername] = useState('');
+      const [loginPassword, setLoginPassword] = useState('');
+      const [loginError, setLoginError] = useState('');
+      
+      const [adminSubTab, setAdminSubTab] = useState('dashboard');
+      const [modalConfig, setModalConfig] = useState({ isOpen: false, type: '', mode: 'add', item: null });
+      const [formData, setFormData] = useState({});
+      const [heroForm, setHeroForm] = useState(defaultHero);
+      const [isSubmitting, setIsSubmitting] = useState(false);
+      const [selectedNews, setSelectedNews] = useState(null);
+
+      useEffect(() => {
+        if (data.hero && data.hero[0]) {
+          setHeroForm(data.hero[0]);
+        }
+      }, [data.hero]);
+
+      const renderIcon = (iconName, props) => {
+        const IconComponent = Icons[iconName] || Icons.ExternalLink;
+        return <IconComponent {...props} />;
+      };
+
+      // FUNGSI GET SECTION YANG ROBUST (Mengembalikan default jika kosong)
+      const getSection = (key) => {
+        const sec = data.sections?.find(s => s.section_key === key);
+        const def = defaultSections.find(s => s.section_key === key);
+        return {
+          title: sec?.title || def?.title || '',
+          subtitle: sec?.subtitle || def?.subtitle || ''
+        };
+      };
+
+      // --- LOGIN VIA FETCH ---
+      const handleLogin = async (e) => {
+        e.preventDefault();
+        setLoginError('');
+        setIsSubmitting(true);
+        try {
+          const res = await fetch(`${GAS_WEB_APP_URL}?action=login&username=${encodeURIComponent(loginUsername)}&password=${encodeURIComponent(loginPassword)}`);
+          const result = await res.json();
+          if (result.success) {
+            setCurrentUser({ name: result.name, role: result.role });
+            setActiveTab(result.role === 'admin' ? 'admin' : 'home');
+            setAdminSubTab('dashboard');
+            setLoginUsername('');
+            setLoginPassword('');
+          } else {
+            setLoginError(result.message || 'Nama pengguna atau kata sandi salah.');
+          }
+        } catch (err) {
+          setLoginError('Gagal menghubungi server: ' + err.message);
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+
+      const handleLogout = () => {
+        setCurrentUser(null);
+        setActiveTab('home');
+      };
+
+      const openModal = (type, mode, item = null) => {
+        setFormData(item || {});
+        setModalConfig({ isOpen: true, type, mode, item });
+      };
+
+      const closeModal = () => {
+        setModalConfig({ isOpen: false, type: '', mode: 'add', item: null });
+        setFormData({});
+      };
+
+      const handleFormChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+      };
+
+      const handleHeroFormChange = (e) => {
+        const { name, value } = e.target;
+        setHeroForm(prev => ({ ...prev, [name]: value }));
+      };
+
+      const handleHeroBtnClick = (target) => {
+        if (!target) return;
+        if (target.startsWith('http')) {
+          window.open(target, '_blank', 'noopener,noreferrer');
+        } else {
+          setActiveTab(target);
+        }
+      };
+
+      // --- CRUD FETCH ---
+      const handleSave = async (e) => {
+        e.preventDefault();
+        const { type, mode, item } = modalConfig;
+        setIsSubmitting(true);
+        const newItem = { ...formData, id: mode === 'add' ? `new_${Date.now()}` : item.id, status: 'aktif' };
+
+        try {
+          const res = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'save', type, mode, item: newItem }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+          });
+          const result = await res.json();
+          if (result.success) {
+            setData(prevData => {
+              const updatedList = mode === 'add' ? [...prevData[type], newItem] : prevData[type].map(d => d.id === item.id ? newItem : d);
+              const newDataComplete = { ...prevData, [type]: updatedList };
+              localStorage.setItem('portalUINData', JSON.stringify(newDataComplete));
+              return newDataComplete;
+            });
+            closeModal();
+          } else {
+            alert("Gagal menyimpan data: " + result.message);
+          }
+        } catch (err) {
+          alert("Gagal menghubungi server: " + err.message);
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+
+      const handleSaveHero = async (e) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        const newItem = { ...heroForm, id: 'hero_1', status: 'aktif' };
+
+        try {
+          const res = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            body: JSON.stringify({ action: 'save', type: 'hero', mode: 'edit', item: newItem }),
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+          });
+          const result = await res.json();
+          if (result.success) {
+            setData(prevData => {
+              const newDataComplete = { ...prevData, hero: [newItem] };
+              localStorage.setItem('portalUINData', JSON.stringify(newDataComplete));
+              return newDataComplete;
+            });
+            alert("Pengaturan Spanduk Hero berhasil diperbarui!");
+          } else {
+            alert("Gagal menyimpan data: " + result.message);
+          }
+        } catch (err) {
+          alert("Gagal menghubungi server: " + err.message);
+        } finally {
+          setIsSubmitting(false);
+        }
+      };
+
+      const handleDelete = async (type, id) => {
+        if(window.confirm('Apakah Anda yakin ingin menghapus data ini secara permanen?')) {
+          setIsSubmitting(true);
+          try {
+             const res = await fetch(`${GAS_WEB_APP_URL}?action=delete&type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`);
+             const result = await res.json();
+             if (result.success) {
+               setData(prevData => {
+                 const newDataComplete = { ...prevData, [type]: prevData[type].filter(item => item.id !== id) };
+                 localStorage.setItem('portalUINData', JSON.stringify(newDataComplete));
+                 return newDataComplete;
+               });
+             } else {
+               alert("Gagal menghapus data: " + result.message);
+             }
+          } catch (err) {
+             alert("Gagal menghubungi server: " + err.message);
+          } finally {
+            setIsSubmitting(false);
+          }
+        }
+      };
+
+      // --- TAMPILAN ---
+
+      // 1. RINGKASAN DASBOR ADMIN (Data Aktual dari DB)
+      const renderAdminDashboard = () => {
+        const totalBerita = data.berita?.length || 0;
+        const totalAplikasi = data.links?.length || 0;
+        const totalRegulasi = data.peraturan?.length || 0;
+        const totalDataAktif = totalBerita + totalAplikasi + totalRegulasi;
+
+        const maxVal = Math.max(totalBerita, totalAplikasi, totalRegulasi, 1);
+        const barBerita = (totalBerita / maxVal) * 100;
+        const barAplikasi = (totalAplikasi / maxVal) * 100;
+        const barRegulasi = (totalRegulasi / maxVal) * 100;
+
+        const aktivitasTerbaru = [...(data.berita || [])]
+          .sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal))
+          .slice(0, 3);
+
+        return (
+          <div className="animate-in fade-in duration-300">
+            <div className="mb-8">
+              <h2 className="text-[28px] font-bold font-display text-gray-900">Ringkasan Dasbor</h2>
+              <p className="text-[15px] text-gray-500 mt-1">Pantau total data aktual portal Anda hari ini.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+              <Card noPadding={true} className="p-6 relative overflow-hidden group">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-12 h-12 rounded-[12px] bg-indigo-50 border border-indigo-100 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                    <Icons.Newspaper className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-[32px] font-bold font-display text-gray-900 leading-tight">{totalBerita}</h3>
+                <p className="text-[14px] text-gray-500 font-medium">Total Berita</p>
+              </Card>
+              
+              <Card noPadding={true} className="p-6 relative overflow-hidden group">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-12 h-12 rounded-[12px] bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                    <Icons.ExternalLink className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-[32px] font-bold font-display text-gray-900 leading-tight">{totalAplikasi}</h3>
+                <p className="text-[14px] text-gray-500 font-medium">Total Aplikasi</p>
+              </Card>
+              
+              <Card noPadding={true} className="p-6 relative overflow-hidden group">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="w-12 h-12 rounded-[12px] bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600 group-hover:scale-110 transition-transform">
+                    <Icons.FileText className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-[32px] font-bold font-display text-gray-900 leading-tight">{totalRegulasi}</h3>
+                <p className="text-[14px] text-gray-500 font-medium">Total Regulasi</p>
+              </Card>
+              
+              <Card noPadding={true} className="p-6 relative overflow-hidden group bg-primary">
+                <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-white opacity-10"></div>
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                  <div className="w-12 h-12 rounded-[12px] bg-white/20 flex items-center justify-center text-white group-hover:scale-110 transition-transform">
+                    <Icons.LayoutDashboard className="w-6 h-6" />
+                  </div>
+                </div>
+                <h3 className="text-[32px] font-bold font-display text-white leading-tight relative z-10">
+                  {totalDataAktif}
+                </h3>
+                <p className="text-[14px] text-indigo-100 font-medium relative z-10">Total Data Sistem</p>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <Card className="lg:col-span-2 min-h-[380px] flex flex-col relative overflow-hidden">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <h3 className="text-[18px] font-semibold font-display text-gray-900">Perbandingan Data Konten</h3>
+                    <p className="text-[13px] text-gray-500">Statistik proporsi data yang telah dipublikasikan</p>
+                  </div>
+                </div>
+                <div className="flex-1 flex items-end justify-center space-x-12 mt-4 px-10">
+                  
+                  <div className="w-24 relative group flex flex-col justify-end h-full items-center">
+                    <span className="mb-2 text-[14px] font-bold text-primary">{totalBerita}</span>
+                    <div className="w-full bg-indigo-100 rounded-t-[8px] transition-all group-hover:bg-primary" style={{height: `${barBerita || 5}%`}}></div>
+                    <span className="mt-3 text-[13px] font-medium text-gray-500">Berita</span>
+                  </div>
+
+                  <div className="w-24 relative group flex flex-col justify-end h-full items-center">
+                    <span className="mb-2 text-[14px] font-bold text-blue-600">{totalAplikasi}</span>
+                    <div className="w-full bg-blue-100 rounded-t-[8px] transition-all group-hover:bg-blue-600" style={{height: `${barAplikasi || 5}%`}}></div>
+                    <span className="mt-3 text-[13px] font-medium text-gray-500">Aplikasi</span>
+                  </div>
+
+                  <div className="w-24 relative group flex flex-col justify-end h-full items-center">
+                    <span className="mb-2 text-[14px] font-bold text-purple-600">{totalRegulasi}</span>
+                    <div className="w-full bg-purple-100 rounded-t-[8px] transition-all group-hover:bg-purple-600" style={{height: `${barRegulasi || 5}%`}}></div>
+                    <span className="mt-3 text-[13px] font-medium text-gray-500">Regulasi</span>
+                  </div>
+
+                </div>
+              </Card>
+
+              <Card className="min-h-[380px] flex flex-col relative overflow-hidden">
+                <div className="mb-6">
+                  <h3 className="text-[18px] font-semibold font-display text-gray-900">Total Akumulasi</h3>
+                  <p className="text-[13px] text-gray-500">Seluruh entri data</p>
+                </div>
+                <div className="flex-1 flex items-center justify-center">
+                   <div className="w-48 h-48 rounded-full border-[16px] border-indigo-50 border-t-primary border-r-primary transform rotate-45 relative shadow-sm">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center -rotate-45">
+                         <span className="text-[32px] font-bold font-display text-gray-900 leading-none">{totalDataAktif}</span>
+                         <span className="text-[12px] text-gray-500 font-medium mt-1">Data</span>
+                      </div>
+                   </div>
+                </div>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <Card className="lg:col-span-2">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-[18px] font-semibold font-display text-gray-900">Publikasi Berita Terbaru</h3>
+                  <Button variant="ghost_primary" className="text-[13px]" onClick={() => setAdminSubTab('berita')}>Kelola Berita</Button>
+                </div>
+                
+                <div className="space-y-5">
+                  {aktivitasTerbaru.map((item, idx) => (
+                    <div key={idx} className="flex items-start">
+                      <div className="w-10 h-10 rounded-full bg-indigo-50 text-primary flex items-center justify-center shrink-0 border border-indigo-100">
+                        <Icons.Newspaper className="w-5 h-5" />
+                      </div>
+                      <div className="ml-4 flex-1 overflow-hidden">
+                        <p className="text-[14px] text-gray-900 font-medium truncate">{item.judul}</p>
+                        <p className="text-[13px] text-gray-500 mt-0.5 truncate max-w-sm sm:max-w-md">{item.ringkasan}</p>
+                      </div>
+                      <span className="text-[12px] text-gray-400 pl-4 whitespace-nowrap">{new Date(item.tanggal).toLocaleDateString('id-ID')}</span>
+                    </div>
+                  ))}
+                  {aktivitasTerbaru.length === 0 && (
+                    <p className="text-gray-500 text-[14px] text-center py-4">Belum ada berita dipublikasikan.</p>
+                  )}
+                </div>
+              </Card>
+
+              <Card className="bg-gradient-to-br from-gray-900 to-gray-800 text-white flex flex-col justify-center items-center text-center border-none">
+                 <div className="w-16 h-16 rounded-[16px] bg-white/10 flex items-center justify-center mb-6">
+                   <Icons.ShieldCheck className="w-8 h-8 text-indigo-400" />
+                 </div>
+                 <h3 className="text-[20px] font-bold font-display mb-2">Sistem Integrasi Aktif</h3>
+                 <p className="text-[14px] text-gray-400 mb-6">Seluruh antarmuka ini terhubung langsung secara real-time dengan Google Sheets Anda.</p>
+                 <Button variant="primary" className="w-full bg-indigo-500 hover:bg-indigo-400 text-white shadow-lg border-none" onClick={() => setAdminSubTab('sections')}>
+                   Kelola Judul Bagian
+                 </Button>
+              </Card>
+            </div>
+          </div>
+        );
+      };
+
+      // 2. TABEL DATA ADMIN (Terdapat pengaturan allowAddDelete)
+      const renderAdminTable = (type, title, columns, dataList, allowAddDelete = true) => (
+        <div className="animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+              <h3 className="text-[24px] font-semibold font-display text-gray-900 leading-tight">{title}</h3>
+              <p className="text-[14px] text-gray-500 mt-1">Kelola konfigurasi dan data {title.toLowerCase()} platform.</p>
+            </div>
+            {allowAddDelete && (
+              <Button onClick={() => openModal(type, 'add')} className="flex-shrink-0" disabled={isSubmitting}>
+                <Icons.Plus className="w-5 h-5 mr-2" /> Tambah Data Baru
+              </Button>
+            )}
+          </div>
+          
+          <Card noPadding={true}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-[14px]">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {columns.map((col, idx) => <th key={idx} className="px-6 py-4 font-semibold text-gray-500 whitespace-nowrap">{col.label}</th>)}
+                    <th className="px-6 py-4 font-semibold text-gray-500 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y divide-gray-200 ${isSubmitting ? 'opacity-50 pointer-events-none' : ''}`}>
+                  {(!dataList || dataList.length === 0) ? (
+                    <tr><td colSpan={columns.length + 1} className="px-6 py-12 text-center text-gray-500">Tidak ada data ditemukan.</td></tr>
+                  ) : (
+                    dataList.map((item) => (
+                      <tr key={item.id} className="bg-white hover:bg-gray-50 transition-colors">
+                        {columns.map((col, idx) => (
+                          <td key={idx} className="px-6 py-4 font-medium text-gray-900 max-w-[200px] truncate">
+                            {col.format ? col.format(item[col.key]) : item[col.key]}
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 text-right whitespace-nowrap">
+                          <Button variant="ghost_primary" onClick={() => openModal(type, 'edit', item)} title="Edit">
+                            <Icons.Edit className="w-4 h-4" />
+                          </Button>
+                          {allowAddDelete && (
+                            <Button variant="ghost_danger" onClick={() => handleDelete(type, item.id)} title="Hapus" className="ml-2">
+                              <Icons.Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      );
+
+      // --- LOGIKA RENDER ---
+      if (loading) return null;
+
+      if (error) return (
+        <div className="min-h-screen bg-[#F9FAFB] flex items-center justify-center p-4 font-sans">
+          <Card className="max-w-md w-full text-center">
+            <Icons.AlertCircle className="w-12 h-12 text-error mx-auto mb-4" />
+            <h2 className="text-[24px] font-bold font-display text-gray-900 mb-2">Koneksi Gagal</h2>
+            <p className="text-[16px] text-gray-500 mb-6">{error}</p>
+            <Button onClick={() => window.location.reload()} className="w-full">Coba Lagi</Button>
+          </Card>
+        </div>
+      );
+
+      // TATA LETAK 1: DASBOR ADMIN CRM
+      if (currentUser?.role === 'admin' && activeTab === 'admin') {
+        return (
+          <div className="flex h-screen bg-[#F9FAFB] font-sans overflow-hidden">
+            {/* Sidebar Kiri */}
+            <aside className="w-64 bg-white border-r border-gray-200 flex flex-col hidden md:flex shrink-0 z-10">
+              <div className="h-20 flex items-center px-6 border-b border-gray-200 cursor-pointer" onClick={() => setActiveTab('home')}>
+                <div className="w-8 h-8 rounded-[8px] bg-gradient-to-br from-secondary to-accent flex items-center justify-center text-white mr-3 shadow-sm">
+                  <Icons.Building2 className="w-4 h-4 text-white" />
+                </div>
+                <span className="font-display font-bold text-[20px] text-gray-900 tracking-tight">Portal<span className="text-primary">CRM</span></span>
+              </div>
+              <nav className="flex-1 py-6 px-4 space-y-1.5 overflow-y-auto">
+                <p className="px-3 text-[12px] font-semibold text-gray-400 uppercase tracking-wider mb-4 mt-2">Menu Utama</p>
+                {['dashboard', 'hero', 'sections', 'berita', 'aplikasi', 'peraturan'].map(tab => (
+                  <button 
+                    key={tab} 
+                    onClick={() => setAdminSubTab(tab)}
+                    className={`w-full flex items-center px-3 py-2.5 rounded-[10px] text-[14px] font-semibold transition-all ${adminSubTab === tab ? 'bg-primary text-white shadow-sm' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'}`}
+                  >
+                    {tab === 'dashboard' && <Icons.LayoutDashboard className="w-5 h-5 mr-3 opacity-90" />}
+                    {tab === 'hero' && <Icons.Image className="w-5 h-5 mr-3 opacity-90" />}
+                    {tab === 'sections' && <Icons.Type className="w-5 h-5 mr-3 opacity-90" />}
+                    {tab === 'berita' && <Icons.Newspaper className="w-5 h-5 mr-3 opacity-90" />}
+                    {tab === 'aplikasi' && <Icons.ExternalLink className="w-5 h-5 mr-3 opacity-90" />}
+                    {tab === 'peraturan' && <Icons.FileText className="w-5 h-5 mr-3 opacity-90" />}
+                    <span className="capitalize">{tab === 'hero' ? 'Spanduk Hero' : tab === 'dashboard' ? 'Dasbor' : tab === 'sections' ? 'Judul Bagian' : tab}</span>
+                  </button>
+                ))}
+              </nav>
+              <div className="p-4 border-t border-gray-200 bg-white">
+                <div className="flex items-center p-2 rounded-[10px] hover:bg-gray-50 transition-colors mb-2">
+                  <div className="w-9 h-9 rounded-full bg-indigo-50 text-primary flex items-center justify-center font-bold font-display border border-indigo-100">
+                    {currentUser.name.charAt(0)}
+                  </div>
+                  <div className="ml-3 flex-1 overflow-hidden">
+                    <p className="text-[14px] font-semibold text-gray-900 truncate leading-tight">{currentUser.name}</p>
+                    <p className="text-[12px] text-gray-500 truncate">{currentUser.role}</p>
+                  </div>
+                </div>
+                <Button variant="ghost" className="w-full text-[14px] text-gray-500 justify-start px-2 hover:bg-gray-50" onClick={handleLogout}>
+                  <Icons.LogOut className="w-4 h-4 mr-2"/> Keluar
+                </Button>
+              </div>
+            </aside>
+
+            {/* Ruang Kerja Utama */}
+            <main className="flex-1 flex flex-col h-screen overflow-hidden">
+              <header className="h-20 bg-white border-b border-gray-200 flex items-center justify-between px-4 md:px-8 shrink-0 z-0">
+                <div className="flex items-center flex-1">
+                  <Icons.Menu className="w-6 h-6 text-gray-500 md:hidden mr-4 cursor-pointer" />
+                  <div className="hidden md:flex items-center relative w-full max-w-md">
+                    <Icons.Search className="w-5 h-5 text-gray-400 absolute left-3.5" />
+                    <input type="text" placeholder="Cari data, pengguna, dokumen..." className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-[10px] text-[14px] text-gray-900 focus:ring-2 focus:ring-primary focus:bg-white outline-none transition-all placeholder-gray-400" />
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <button className="relative p-2 text-gray-400 hover:text-gray-900 transition-colors rounded-full hover:bg-gray-50">
+                    <Icons.Bell className="w-5 h-5" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-error rounded-full border-2 border-white box-content"></span>
+                  </button>
+                  <Button variant="outline" className="hidden sm:flex text-[14px] py-2 border-gray-200" onClick={() => setActiveTab('home')}>Lihat Portal Publik</Button>
+                </div>
+              </header>
+
+              <div className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar">
+                <div className="max-w-7xl mx-auto">
+                  {adminSubTab === 'dashboard' && renderAdminDashboard()}
+                  {adminSubTab === 'hero' && (
+                    <div className="animate-in fade-in duration-300">
+                      <div className="mb-6">
+                        <h3 className="text-[24px] font-semibold font-display text-gray-900 leading-tight">Pengaturan Spanduk Hero</h3>
+                        <p className="text-[14px] text-gray-500 mt-1">Kelola teks, tombol, dan gambar latar belakang halaman awal portal Anda.</p>
+                      </div>
+                      <Card className="max-w-4xl">
+                        <form onSubmit={handleSaveHero} className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="md:col-span-2">
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Teks Badge (Lencana Kecil)</label>
+                              <input type="text" name="badge" value={heroForm.badge || ''} onChange={handleHeroFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                            </div>
+                            <div>
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Judul Baris 1 (Teks Gelap)</label>
+                              <input type="text" name="title1" value={heroForm.title1 || ''} onChange={handleHeroFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                            </div>
+                            <div>
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Judul Baris 2 (Teks Gradasi)</label>
+                              <input type="text" name="title2" value={heroForm.title2 || ''} onChange={handleHeroFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                            </div>
+                            <div className="md:col-span-2">
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Deskripsi Lengkap</label>
+                              <textarea name="description" value={heroForm.description || ''} onChange={handleHeroFormChange} required rows="3" className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting}></textarea>
+                            </div>
+                            <div className="pt-4 border-t border-gray-100 md:col-span-2">
+                              <h4 className="text-[16px] font-semibold text-gray-900 mb-4">Pengaturan Tombol</h4>
+                            </div>
+                            <div>
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Teks Tombol Utama</label>
+                              <input type="text" name="btn1_text" value={heroForm.btn1_text || ''} onChange={handleHeroFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                            </div>
+                            <div>
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Target Tombol Utama (URL atau Tab)</label>
+                              <input type="text" name="btn1_target" value={heroForm.btn1_target || ''} onChange={handleHeroFormChange} placeholder="aplikasi, peraturan, atau https://..." required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                            </div>
+                            <div>
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Teks Tombol Sekunder</label>
+                              <input type="text" name="btn2_text" value={heroForm.btn2_text || ''} onChange={handleHeroFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                            </div>
+                            <div>
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Target Tombol Sekunder (URL atau Tab)</label>
+                              <input type="text" name="btn2_target" value={heroForm.btn2_target || ''} onChange={handleHeroFormChange} placeholder="aplikasi, peraturan, atau https://..." required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                            </div>
+                            <div className="pt-4 border-t border-gray-100 md:col-span-2">
+                              <label className="block text-[14px] font-medium text-gray-700 mb-1.5">URL Gambar Latar (Opsional)</label>
+                              <input type="url" name="bg_image_url" value={heroForm.bg_image_url || ''} onChange={handleHeroFormChange} placeholder="Biarkan kosong untuk warna polos. Contoh: https://images.unsplash.com/..." className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary outline-none" disabled={isSubmitting} />
+                              {heroForm.bg_image_url && <img src={heroForm.bg_image_url} alt="Pratinjau" className="mt-4 h-32 w-auto object-cover rounded-[10px] border border-gray-200 shadow-sm" />}
+                            </div>
+                          </div>
+                          <div className="flex justify-end pt-4 border-t border-gray-100">
+                            <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Menyimpan...' : 'Simpan Pengaturan Hero'}</Button>
+                          </div>
+                        </form>
+                      </Card>
+                    </div>
+                  )}
+                  {adminSubTab === 'sections' && renderAdminTable('sections', 'Pengaturan Judul Bagian', [
+                    { label: 'Kode Bagian', key: 'section_key' }, 
+                    { label: 'Judul Utama', key: 'title' }, 
+                    { label: 'Sub Judul', key: 'subtitle' }
+                  ], data.sections, false)}
+                  {adminSubTab === 'berita' && renderAdminTable('berita', 'Berita & Artikel', [{ label: 'Judul', key: 'judul' }, { label: 'Tanggal Publikasi', key: 'tanggal', format: (v) => new Date(v).toLocaleDateString('id-ID') }], data.berita)}
+                  {adminSubTab === 'aplikasi' && renderAdminTable('links', 'Tautan Aplikasi', [{ label: 'Nama Aplikasi', key: 'nama_aplikasi' }, { label: 'Deskripsi Singkat', key: 'deskripsi' }], data.links)}
+                  {adminSubTab === 'peraturan' && renderAdminTable('peraturan', 'Dokumen Regulasi', [{ label: 'No. Dokumen', key: 'nomor' }, { label: 'Tentang', key: 'tentang' }], data.peraturan)}
+                </div>
+              </div>
+            </main>
+
+            {/* Formulir Modal untuk Admin */}
+            <Modal isOpen={modalConfig.isOpen} onClose={closeModal} title={`${modalConfig.mode === 'add' ? 'Tambah Data Baru' : 'Edit Data'}`}>
+              <form onSubmit={handleSave} className="space-y-5">
+                {modalConfig.type === 'sections' && (
+                  <>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Kode Bagian (JANGAN DIUBAH)</label><input type="text" name="section_key" value={formData.section_key || ''} className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-500 bg-gray-100 outline-none" disabled /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Judul Utama</label><input type="text" name="title" value={formData.title || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Sub Judul / Deskripsi</label><input type="text" name="subtitle" value={formData.subtitle || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                  </>
+                )}
+                {modalConfig.type === 'berita' && (
+                  <>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Judul Artikel</label><input type="text" name="judul" value={formData.judul || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Tanggal Publikasi</label><input type="date" name="tanggal" value={formData.tanggal || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">URL Gambar</label><input type="url" name="gambar_url" value={formData.gambar_url || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Ringkasan Singkat</label><textarea name="ringkasan" value={formData.ringkasan || ''} onChange={handleFormChange} required rows="2" className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting}></textarea></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Konten Penuh</label><textarea name="konten" value={formData.konten || ''} onChange={handleFormChange} required rows="5" className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting}></textarea></div>
+                  </>
+                )}
+                {modalConfig.type === 'links' && (
+                  <>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Nama Aplikasi</label><input type="text" name="nama_aplikasi" value={formData.nama_aplikasi || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">URL Tujuan</label><input type="url" name="url" value={formData.url || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Pengenal Ikon String</label><input type="text" name="icon" value={formData.icon || ''} onChange={handleFormChange} placeholder="contoh: BookOpen, Landmark" required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Deskripsi Singkat</label><textarea name="deskripsi" value={formData.deskripsi || ''} onChange={handleFormChange} required rows="2" className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting}></textarea></div>
+                  </>
+                )}
+                {modalConfig.type === 'peraturan' && (
+                  <>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Nomor Dokumen</label><input type="text" name="nomor" value={formData.nomor || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Tahun Berlaku</label><input type="number" name="tahun" value={formData.tahun || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">URL Unduhan</label><input type="url" name="file_url" value={formData.file_url || ''} onChange={handleFormChange} required className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting} /></div>
+                    <div><label className="block text-[14px] font-medium text-gray-700 mb-1.5">Tentang / Perihal</label><textarea name="tentang" value={formData.tentang || ''} onChange={handleFormChange} required rows="3" className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none" disabled={isSubmitting}></textarea></div>
+                  </>
+                )}
+                <div className="flex justify-end space-x-3 pt-6">
+                  <Button type="button" variant="ghost" onClick={closeModal} disabled={isSubmitting}>Batal</Button>
+                  <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Menyimpan...' : 'Simpan Data'}</Button>
+                </div>
+              </form>
+            </Modal>
+          </div>
+        );
+      }
+
+      // TATA LETAK 2: PORTAL PUBLIK (Gaya Halaman Landing)
+      return (
+        <div className="min-h-screen bg-[#F9FAFB] font-sans flex flex-col">
+          
+          <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+              <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
+                <div className="w-10 h-10 rounded-[12px] bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-sm">
+                  <Icons.Building2 className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-display font-bold text-[20px] text-gray-900 tracking-tight">Portal<span className="text-primary">Keuangan</span></span>
+              </div>
+              
+              <nav className="hidden md:flex items-center space-x-8">
+                {['home', 'aplikasi', 'peraturan', 'berita'].map(tab => (
+                  <button key={tab} onClick={() => setActiveTab(tab)} className={`text-[14px] font-semibold transition-colors capitalize ${activeTab === tab ? 'text-primary' : 'text-gray-500 hover:text-gray-900'}`}>
+                    {tab === 'home' ? 'Beranda' : tab}
+                  </button>
+                ))}
+              </nav>
+
+              <div>
+                {currentUser ? (
+                  <Button variant="outline" className="py-2.5 text-[14px]" onClick={() => setActiveTab('admin')}>
+                    <Icons.LayoutDashboard className="w-4 h-4 mr-2"/> Ruang Kerja
+                  </Button>
+                ) : (
+                  <Button variant="primary" className="py-2.5 px-6 text-[14px]" onClick={() => setActiveTab('login')}>Masuk</Button>
+                )}
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-grow w-full">
+            
+            {activeTab === 'login' && !currentUser && (
+              <div className="max-w-md mx-auto mt-20 animate-in fade-in duration-500 px-4">
+                <Card className="p-8">
+                  <div className="text-center mb-8">
+                    <div className="mx-auto w-12 h-12 rounded-[12px] bg-indigo-50 text-primary flex items-center justify-center mb-4 border border-indigo-100">
+                      <Icons.Lock className="w-6 h-6" />
+                    </div>
+                    <h2 className="text-[24px] font-bold font-display text-gray-900">Selamat Datang Kembali</h2>
+                    <p className="text-[14px] text-gray-500 mt-2">Masukkan kredensial Anda untuk mengakses sistem</p>
+                  </div>
+                  {loginError && <div className="bg-red-50 text-error p-4 rounded-[10px] text-[14px] mb-6 flex items-start space-x-3 border border-red-100"><Icons.AlertCircle className="w-5 h-5 flex-shrink-0" /><span>{loginError}</span></div>}
+                  <form onSubmit={handleLogin} className="space-y-5">
+                    <div>
+                      <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Nama Pengguna</label>
+                      <input type="text" value={loginUsername} onChange={(e) => setLoginUsername(e.target.value)} className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" required disabled={isSubmitting} />
+                    </div>
+                    <div>
+                      <label className="block text-[14px] font-medium text-gray-700 mb-1.5">Kata Sandi</label>
+                      <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} className="w-full rounded-[10px] border border-gray-200 p-3 text-[16px] text-gray-900 focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all" required disabled={isSubmitting} />
+                    </div>
+                    <Button type="submit" className="w-full mt-2" disabled={isSubmitting}>{isSubmitting ? 'Mengautentikasi...' : 'Masuk'}</Button>
+                  </form>
+                </Card>
+              </div>
+            )}
+
+            {activeTab === 'home' && (
+              <section className="bg-white border-b border-gray-200 relative overflow-hidden">
+                {data.hero && data.hero[0] && data.hero[0].bg_image_url && (
+                  <div className="absolute inset-0 z-0">
+                    <img src={data.hero[0].bg_image_url} className="w-full h-full object-cover" alt="Latar Belakang Hero" />
+                    <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px]"></div>
+                  </div>
+                )}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 flex flex-col items-center text-center relative z-10">
+                  <Badge variant="outline" className="mb-6 rounded-full border-gray-200 text-gray-500 bg-white/80 backdrop-blur-sm px-4 py-1.5 shadow-sm">
+                    {data.hero && data.hero[0] ? data.hero[0].badge : 'Sistem Informasi Terpadu'}
+                  </Badge>
+                  <h1 className="text-[36px] md:text-[56px] font-bold font-display text-gray-900 leading-tight mb-6 max-w-4xl tracking-tight drop-shadow-sm">
+                    {data.hero && data.hero[0] ? data.hero[0].title1 : 'Pusat Layanan Data Keuangan'} <br className="hidden md:block"/>
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-accent drop-shadow-sm">
+                      {data.hero && data.hero[0] ? data.hero[0].title2 : 'UIN Palopo'}
+                    </span>
+                  </h1>
+                  <p className="text-[18px] text-gray-700 font-medium mb-10 max-w-2xl leading-relaxed drop-shadow-sm">
+                    {data.hero && data.hero[0] ? data.hero[0].description : 'Akses cepat ke berbagai sistem aplikasi keuangan, pembaruan regulasi terbaru, dan informasi anggaran secara transparan dan terintegrasi.'}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                    <Button variant="primary" className="px-8 py-4 shadow-lg" onClick={() => handleHeroBtnClick(data.hero && data.hero[0] ? data.hero[0].btn1_target : 'aplikasi')}>
+                      {data.hero && data.hero[0] ? data.hero[0].btn1_text : 'Mulai Eksplorasi'}
+                    </Button>
+                    <Button variant="outline" className="px-8 py-4 bg-white/90 backdrop-blur-sm shadow-sm hover:bg-white" onClick={() => handleHeroBtnClick(data.hero && data.hero[0] ? data.hero[0].btn2_target : 'peraturan')}>
+                      {data.hero && data.hero[0] ? data.hero[0].btn2_text : 'Lihat Regulasi Terbaru'}
+                    </Button>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+              
+              {(activeTab === 'home' || activeTab === 'aplikasi') && (
+                <section className="mb-20">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h3 className="text-[24px] font-bold font-display text-gray-900 mb-2">{getSection('aplikasi').title}</h3>
+                      <p className="text-[16px] text-gray-500">{getSection('aplikasi').subtitle}</p>
+                    </div>
+                    {activeTab === 'home' && <button onClick={() => setActiveTab('aplikasi')} className="text-[14px] font-semibold text-primary hover:text-indigo-700 hidden sm:flex items-center">Lihat Semua <Icons.ChevronRight className="w-4 h-4 ml-1" /></button>}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {data.links && data.links.map((link) => (
+                      <a key={link.id} href={link.url && link.url !== '#' ? link.url : '#'} target="_blank" rel="noopener noreferrer" className="bg-white rounded-[16px] border border-gray-200 p-6 flex flex-col hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+                        <div className="h-12 w-12 rounded-[12px] bg-indigo-50 text-primary flex items-center justify-center mb-6 border border-indigo-100">
+                          {renderIcon(link.icon, { className: "w-6 h-6" })}
+                        </div>
+                        <h4 className="text-[18px] font-semibold font-display text-gray-900 mb-2 leading-tight">{link.nama_aplikasi}</h4>
+                        <p className="text-[14px] text-gray-500 mb-6 flex-grow line-clamp-3 leading-relaxed">{link.deskripsi}</p>
+                        <div className="text-[14px] font-semibold text-primary flex items-center mt-auto group">
+                          Buka Aplikasi <Icons.ChevronRight className="w-4 h-4 ml-1 transform group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </a>
+                    ))}
+                    {(!data.links || data.links.length === 0) && <p className="text-gray-500 col-span-full">Belum ada aplikasi yang ditambahkan.</p>}
+                  </div>
+                </section>
+              )}
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                
+                {(activeTab === 'home' || activeTab === 'berita') && (
+                  <section className={`lg:col-span-2 ${activeTab === 'berita' ? 'lg:col-span-3' : ''}`}>
+                    <div className="mb-8">
+                      <h3 className="text-[24px] font-bold font-display text-gray-900 mb-2">{getSection('berita').title}</h3>
+                      <p className="text-[16px] text-gray-500">{getSection('berita').subtitle}</p>
+                    </div>
+                    <div className={`grid gap-8 ${activeTab === 'berita' ? 'md:grid-cols-2 lg:grid-cols-3' : 'md:grid-cols-2'}`}>
+                      {data.berita && data.berita.map((item) => (
+                        <Card key={item.id} noPadding={true} className="flex flex-col hover:shadow-lg transition-shadow duration-300 cursor-pointer" onClick={() => setSelectedNews(item)}>
+                          <div className="h-48 overflow-hidden relative border-b border-gray-100 bg-gray-50">
+                            <img src={item.gambar_url} loading="lazy" alt={item.judul} className="w-full h-full object-cover hover:scale-105 transition-transform duration-700" onError={(e) => { e.target.onerror = null; e.target.src = "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=400&h=250"; }} />
+                          </div>
+                          <div className="p-6 flex flex-col flex-grow">
+                            <div className="flex items-center text-[12px] font-medium text-gray-500 mb-4 space-x-2">
+                              <Icons.Calendar className="w-4 h-4" /><span>{new Date(item.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            </div>
+                            <h4 className="text-[18px] font-semibold font-display text-gray-900 mb-3 leading-snug line-clamp-2">{item.judul}</h4>
+                            <p className="text-[14px] text-gray-500 mb-6 line-clamp-3 leading-relaxed flex-grow">{item.ringkasan}</p>
+                            <span className="text-[14px] font-semibold text-primary inline-flex items-center mt-auto">Baca Artikel <Icons.ChevronRight className="w-4 h-4 ml-1" /></span>
+                          </div>
+                        </Card>
+                      ))}
+                      {(!data.berita || data.berita.length === 0) && <p className="text-gray-500 col-span-full">Belum ada berita yang diterbitkan.</p>}
+                    </div>
+                  </section>
+                )}
+                
+                {(activeTab === 'home' || activeTab === 'peraturan') && (
+                  <section className={`lg:col-span-1 ${activeTab === 'peraturan' ? 'lg:col-span-3' : ''}`}>
+                    <div className="mb-8">
+                      <h3 className="text-[24px] font-bold font-display text-gray-900 mb-2">{getSection('peraturan').title}</h3>
+                      <p className="text-[16px] text-gray-500">{getSection('peraturan').subtitle}</p>
+                    </div>
+                    <Card noPadding={true}>
+                      <div className="divide-y divide-gray-100">
+                        {data.peraturan && data.peraturan.map((reg) => (
+                          <div key={reg.id} className="p-6 hover:bg-gray-50 transition-colors flex items-start space-x-4">
+                            <div className="mt-1 p-2.5 bg-indigo-50 rounded-[10px] text-primary border border-indigo-100 shadow-sm"><Icons.FileText className="w-5 h-5" /></div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                <h5 className="font-semibold text-[14px] font-display text-gray-900 truncate" title={reg.nomor}>{reg.nomor}</h5>
+                                <Badge variant="outline" className="w-max text-[12px] py-0.5">{reg.tahun}</Badge>
+                              </div>
+                              <p className="text-[14px] text-gray-500 line-clamp-2 mb-3 leading-relaxed">{reg.tentang}</p>
+                              <a href={reg.file_url} target="_blank" rel="noopener noreferrer" className="text-[14px] font-semibold text-primary hover:text-indigo-700 inline-flex items-center">
+                                Unduh PDF
+                              </a>
+                            </div>
+                          </div>
+                        ))}
+                        {(!data.peraturan || data.peraturan.length === 0) && <div className="p-6 text-[14px] text-gray-500 text-center">Belum ada data peraturan.</div>}
+                      </div>
+                      {activeTab === 'home' && data.peraturan && data.peraturan.length > 0 && (
+                        <div className="p-4 bg-gray-50 border-t border-gray-200 text-center">
+                          <Button variant="ghost" className="w-full text-[14px]" onClick={() => setActiveTab('peraturan')}>Lihat Seluruh Arsip</Button>
+                        </div>
+                      )}
+                    </Card>
+                  </section>
+                )}
+              </div>
+            </div>
+          </main>
+
+          <Modal isOpen={!!selectedNews} onClose={() => setSelectedNews(null)} title="Pratinjau Artikel">
+            {selectedNews && (
+              <div className="space-y-6">
+                <img src={selectedNews.gambar_url} loading="lazy" alt={selectedNews.judul} className="w-full h-56 object-cover rounded-[12px] shadow-sm border border-gray-200" onError={(e) => { e.target.onerror = null; e.target.src = "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=400&h=250"; }} />
+                <h2 className="text-[24px] font-bold font-display text-gray-900 leading-tight">{selectedNews.judul}</h2>
+                <div className="flex items-center text-[14px] font-medium text-gray-500 space-x-2"><Icons.Calendar className="w-4 h-4" /><span>{new Date(selectedNews.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
+                <div className="text-gray-600 whitespace-pre-wrap text-[16px] leading-relaxed border-t border-gray-100 pt-6">{selectedNews.konten || selectedNews.ringkasan}</div>
+                <div className="pt-4 flex justify-end"><Button onClick={() => setSelectedNews(null)} variant="outline">Tutup Artikel</Button></div>
+              </div>
+            )}
+          </Modal>
+
+          <footer className="bg-white border-t border-gray-200 pt-16 pb-8">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+                <div className="md:col-span-2">
+                  <div className="flex items-center space-x-3 mb-6">
+                    <div className="w-8 h-8 rounded-[8px] bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-sm">
+                      <Icons.Building2 className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="font-display font-bold text-[18px] text-gray-900 tracking-tight">Portal<span className="text-primary">Keuangan</span></span>
+                  </div>
+                  <p className="text-[14px] text-gray-500 max-w-sm leading-relaxed">
+                    Platform SaaS terpadu yang memusatkan seluruh layanan data keuangan, regulasi, dan informasi anggaran Universitas Islam Negeri Palopo.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-bold font-display text-gray-900 mb-6">Sumber Daya</h4>
+                  <ul className="space-y-4 text-[14px]">
+                    <li><a href="#" className="text-gray-500 hover:text-primary transition-colors">Situs Utama UIN Palopo</a></li>
+                    <li><a href="#" className="text-gray-500 hover:text-primary transition-colors">Kementerian Agama RI</a></li>
+                    <li><a href="#" className="text-gray-500 hover:text-primary transition-colors">Pusat Layanan Kemenkeu</a></li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-bold font-display text-gray-900 mb-6">Kontak</h4>
+                  <ul className="space-y-4 text-[14px] text-gray-500">
+                    <li>Gedung Rektorat Lt. 2</li>
+                    <li>Jl. Agatis, Balandai</li>
+                    <li>Sulawesi Selatan 91914</li>
+                    <li className="font-semibold text-primary pt-2">keuangan@uinpalopo.ac.id</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="border-t border-gray-200 pt-8 text-[14px] text-center text-gray-500 font-medium">
+                © {new Date().getFullYear()} Departemen Keuangan UIN Palopo. Hak cipta dilindungi.
+              </div>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
